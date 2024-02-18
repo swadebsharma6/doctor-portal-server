@@ -29,6 +29,7 @@ async function run() {
     
     const appOptionCollection = client.db('DoctorPortalDB').collection('appointmentOptions');
     const bookingCollection = client.db('DoctorPortalDB').collection('bookings');
+    const usersCollection = client.db('DoctorPortalDB').collection('users');
 
     // Booking Related Api
     app.post('/bookings', async(req, res) =>{
@@ -55,6 +56,13 @@ async function run() {
       const cursor = bookingCollection.find(query);
       const result = await cursor.toArray();
       res.send(result)
+    });
+
+    app.get('/booking', async(req, res)=>{
+      const email = req.query.email;
+      const query = {email: email};
+      const bookings = await bookingCollection.find(query).toArray();
+      res.send(bookings);
     })
 
 
@@ -80,9 +88,14 @@ async function run() {
         res.send(options);
     })
 
+    // User related Api
+    app.post('/users', async(req, res)=>{
+      const user = req.body;
+      const result = await usersCollection.insertOne(user);
+      res.send(result);
+    })
 
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
