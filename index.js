@@ -1,5 +1,5 @@
 const express = require('express');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const app = express();
@@ -77,7 +77,7 @@ async function run() {
       res.send(result)
     });
 
-    app.get('/booking', verifyJWT, async(req, res)=>{
+    app.get('/bookings', verifyJWT, async(req, res)=>{
       const email = req.query.email;
       const decodedEmail = req.decoded.email;
       if(email !== decodedEmail){
@@ -129,6 +129,35 @@ async function run() {
       const user = req.body;
       const result = await usersCollection.insertOne(user);
       res.send(result);
+    })
+
+    app.get('/users', async(req, res)=>{
+      const query = {};
+      const users = await usersCollection.find(query).toArray();
+      res.send(users)
+    })
+
+    // Make a user Admin
+    app.put('/users/admin/:id', verifyJWT, async(req, res)=>{
+
+      const decodedEmail = req.decoded.email;
+      const query ={email: decodedEmail};
+      const user =await usersCollection.findOne(query);
+
+      if(user?.role !=='admin'){
+        return res.status(403).send({message: 'forbidden Access'})
+      }
+
+      const id = req.params.id;
+      const filter = {_id : new ObjectId(id)};
+      const options = {upsert: true}
+      const updatedDoc ={
+        $set:{
+          role: 'admin'
+        }
+      }
+      const result = await usersCollection.updateOne(filter, updatedDoc, options);
+      res.send(result)
     })
 
 
