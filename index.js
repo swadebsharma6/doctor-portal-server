@@ -54,17 +54,17 @@ async function run() {
     app.post('/bookings', async(req, res) =>{
       const booking = req.body;
       // console.log(booking)
-      const query ={
-        selectedDate: booking.selectedDate,
-        email:booking.email,
-        treatment: booking.treatment
-      }
-      const alreadyBooked = await bookingCollection.find(query).toArray();
+      // const query ={
+      //   selectedDate: booking.selectedDate,
+      //   email:booking.email,
+      //   treatment: booking.treatment
+      // }
+      // const alreadyBooked = await bookingCollection.find(query).toArray();
 
-      if(alreadyBooked.length){
-        const message = `You Already Have a Booking on ${booking.selectedDate}`
-        return res.send({acknowledged: false, message})
-      }
+      // if(alreadyBooked.length){
+      //   const message = `You Already Have a Booking on ${booking.selectedDate}`
+      //   return res.send({acknowledged: false, message})
+      // }
 
       const result = await bookingCollection.insertOne(booking);
       res.send(result);
@@ -91,7 +91,8 @@ async function run() {
 
     //Use Aggregate to Query multiple Appointment collection  and then merge Data Related Api
     app.get('/appointmentOptions', async(req, res)=>{
-      const date = req.query.date;
+       const date = req.query.date;
+      //  console.log('date', date)
        
         const options = await appOptionCollection.find().toArray();
         // get the booking of the provided date
@@ -101,11 +102,12 @@ async function run() {
         options.forEach(option =>{
           const optionBooked = alreadyBooked.filter(book => book.treatment === option.name);
          const bookedSlots = optionBooked.map(book => book.slot);
-
-         const remainingSlots = option.slots.filter(slot => !bookedSlots.includes(slot))
+          
+        //  Remaining Slots 
+         const remainingSlots = option.slots.filter(slot => !bookedSlots.includes(slot));
          option.slots = remainingSlots;
 
-        //  console.log(date, option.name, remainingSlots.length)
+         console.log(date, option.name, remainingSlots.length)
         })
 
         res.send(options);
