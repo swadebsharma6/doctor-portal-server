@@ -50,21 +50,21 @@ async function run() {
     const bookingCollection = client.db('DoctorPortalDB').collection('bookings');
     const usersCollection = client.db('DoctorPortalDB').collection('users');
 
-    // Booking Related Api
+    // Booking Related Api and minimum one slot book per a day
     app.post('/bookings', async(req, res) =>{
       const booking = req.body;
-      // console.log(booking)
-      // const query ={
-      //   selectedDate: booking.selectedDate,
-      //   email:booking.email,
-      //   treatment: booking.treatment
-      // }
-      // const alreadyBooked = await bookingCollection.find(query).toArray();
+      console.log(booking)
+      const query ={
+        selectedDate: booking.selectedDate,
+        email:booking.email,
+        treatment: booking.treatment
+      }
+      const alreadyBooked = await bookingCollection.find(query).toArray();
 
-      // if(alreadyBooked.length){
-      //   const message = `You Already Have a Booking on ${booking.selectedDate}`
-      //   return res.send({acknowledged: false, message})
-      // }
+      if(alreadyBooked.length){
+        const message = `You Already Have a Booking on ${booking.selectedDate}`
+        return res.send({acknowledged: false, message})
+      }
 
       const result = await bookingCollection.insertOne(booking);
       res.send(result);
@@ -107,11 +107,12 @@ async function run() {
          const remainingSlots = option.slots.filter(slot => !bookedSlots.includes(slot));
          option.slots = remainingSlots;
 
-         console.log(date, option.name, remainingSlots.length)
+        //  console.log(date, option.name, remainingSlots.length)
         })
 
         res.send(options);
     })
+
 
     // User related Api
 
