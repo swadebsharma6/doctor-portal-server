@@ -89,7 +89,7 @@ async function run() {
     app.get('/bookings', verifyJwt,  async(req, res)=>{
       // console.log('Token',req.headers.authorization)
       const email = req.query.email;
-      const decodedEmail = req.decoded.email;
+      const decodedEmail = req.decoded?.email;
       if(email !== decodedEmail){
         return res.status(403).send({message:'Forbidden Access'})
       }
@@ -198,7 +198,7 @@ async function run() {
     // Make a user Admin
     app.put('/users/admin/:id', verifyJwt, async(req, res)=>{
 
-      const decodedEmail = req.decoded.email;
+      const decodedEmail = req.decoded?.email;
       const query ={email: decodedEmail};
       const user = await usersCollection.findOne(query);
 
