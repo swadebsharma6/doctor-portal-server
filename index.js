@@ -23,28 +23,15 @@ const client = new MongoClient(uri, {
   }
 });
 
-// const verifyJWT = (req, res, next)=>{
-//   const authHeader = req.headers.authorization;
-//   if(!authHeader){
-//     return res.status(401).send('unauthorized access');
-//   }
 
-//   const token = authHeader.split(' ')[1];
 
-//   jwt.verify(token, process.env.ACCESS_TOKEN, function(err, decoded){
-//     if(err){
-//       return res.status(403).send({message: 'Forbidden Access'})
-//     }
-//     res.decoded = decoded;
-//     next();
-//   })
-// }
+// MiddleWare for Verify Token
 
 const verifyJwt = (req, res, next)=>{
-  
+  // console.log('Token inside Jwt',req.headers.authorization)
   const authHeader = req.headers.authorization;
   if(!authHeader){
-        return res.status(401).send('unauthorized access');
+        return res.status(401).send('unauthorized Access');
       }
 
       const token = authHeader.split(' ')[1];
@@ -73,7 +60,7 @@ async function run() {
     const query = {email: email}
     const user = await usersCollection.findOne(query);
     if(user){
-      const token = jwt.sign({email}, process.env.ACCESS_TOKEN, {expiresIn: '1h'})
+      const token = jwt.sign({email}, process.env.ACCESS_TOKEN, {expiresIn: '2h'})
       return res.send({accessToken : token})
     }
     res.status(403).send({accessToken: ''})
@@ -98,8 +85,9 @@ async function run() {
       res.send(result);
     });
 
-    // get booking as current users login .
+    // get all booking as current users login .
     app.get('/bookings', verifyJwt,  async(req, res)=>{
+      // console.log('Token',req.headers.authorization)
       const email = req.query.email;
       const decodedEmail = req.decoded.email;
       if(email !== decodedEmail){
@@ -124,6 +112,7 @@ async function run() {
         options.forEach(option =>{
           const optionBooked = alreadyBooked.filter(book => book.treatment === option.name);
          const bookedSlots = optionBooked.map(book => book.slot);
+        //  console.log('Booked slots you selected :',bookedSlots)
           
         //  Remaining Slots 
          const remainingSlots = option.slots.filter(slot => !bookedSlots.includes(slot));
@@ -135,9 +124,58 @@ async function run() {
         res.send(options);
     })
 
+    // app.get('/v2/appointmentOptions', async(req,res)=>{
+    //   const date = req.query.date;
+    //   const options = await appOptionCollection.aggregate([
+    //     {
+    //       $lookup:
+    //         {
+    //           from: 'bookings',
+    //           localField: 'name',
+    //           foreignField: 'treatment',
+    //           pipeline: [ 
+    //             {
+    //               $match:{
+    //                 $expr:{
+    //                   $eq: ['$selectedDate', date]
+    //                 }
+    //               }
+    //             }
+    //           ],
+    //           as: 'booked'
+    //         }
+    //    },
+    //    {
+    //       $project:{
+    //         name: 1,
+    //         slots: 1,
+    //         booked:{
+    //           $map:{
+    //             input: '$booked',
+    //             as: 'book',
+    //             in: '$$book.slot'
+    //           }
+    //         }
+    //       }
+    //    },
+    //    {
+    //       $project:{
+    //         name: 1,
+    //         slots: {
+    //           $setDifference: ['$slots', '$booked']
+    //         }
+    //       }
+    //    }
+    //   ]).toArray();
+
+    //   res.send(options);
+    // })
+
 
      // User related all Api
-    app.post('/users', async(req, res)=>{
+   
+   
+     app.post('/users', async(req, res)=>{
       const user = req.body;
       const result = await usersCollection.insertOne(user);
       res.send(result);
@@ -151,7 +189,7 @@ async function run() {
     // Get A User role of Admin
     app.get('/users/admin/:email', async(req, res)=>{
       const email = req.params.email;
-      const query ={email: email};
+      const query ={ email: email};
       const user = await usersCollection.findOne(query);
       res.send({isAdmin: user?.role === 'admin'});
 
@@ -162,9 +200,9 @@ async function run() {
 
       const decodedEmail = req.decoded.email;
       const query ={email: decodedEmail};
-      const user =await usersCollection.findOne(query);
+      const user = await usersCollection.findOne(query);
 
-      if(user?.role !=='admin'){
+      if(user?.role !== 'admin'){
         return res.status(403).send({message: 'forbidden Access'})
       }
 
