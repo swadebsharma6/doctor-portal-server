@@ -54,6 +54,7 @@ async function run() {
     const appOptionCollection = client.db('DoctorPortalDB').collection('appointmentOptions');
     const bookingCollection = client.db('DoctorPortalDB').collection('bookings');
     const usersCollection = client.db('DoctorPortalDB').collection('users');
+    const doctorCollection = client.db('DoctorPortalDB').collection('doctors');
 
   app.get('/jwt', async(req, res)=>{
     const email = req.query.email;
@@ -122,6 +123,13 @@ async function run() {
         })
 
         res.send(options);
+    })
+
+
+    app.get('/appointmentSpecialty', async(req, res)=>{
+      const query ={};
+      const result = await appOptionCollection.find(query).project({name: 1}).toArray();
+      res.send(result)
     })
 
     // app.get('/v2/appointmentOptions', async(req,res)=>{
@@ -215,6 +223,20 @@ async function run() {
         }
       }
       const result = await usersCollection.updateOne(filter, updatedDoc, options);
+      res.send(result)
+    });
+
+
+    // Doctors collection related Api
+    app.post('/doctors', async(req, res)=>{
+      const doctor = req.body;
+      const result = await doctorCollection.insertOne(doctor);
+      res.send(result)
+    })
+
+    app.get('/doctors', async(req, res)=>{
+      const query ={}
+      const result = await doctorCollection.find(query).toArray();
       res.send(result)
     })
 
