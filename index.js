@@ -40,7 +40,9 @@ const verifyJwt = (req, res, next)=>{
             if(error){
               return res.status(403).send({message: 'Forbidden Access'})
             }
+
             res.decoded = decoded;
+
             next();
           })
 }
@@ -55,6 +57,21 @@ async function run() {
     const bookingCollection = client.db('DoctorPortalDB').collection('bookings');
     const usersCollection = client.db('DoctorPortalDB').collection('users');
     const doctorCollection = client.db('DoctorPortalDB').collection('doctors');
+
+    // Another MiddleWare
+    // make sure you verifyAdmin after verifyJwt
+    // const verifyAdmin = async(req, res, next)=>{
+
+    //  const decodedEmail = req.decoded?.email;
+    //   const query ={email: decodedEmail};
+    //   const user = await usersCollection.findOne(query);
+
+    //   if(user?.role !== 'admin'){
+    //     return res.status(403).send({message: 'forbidden Access'})
+    //   }
+    //   next();
+
+    // }
 
   app.get('/jwt', async(req, res)=>{
     const email = req.query.email;
@@ -86,17 +103,27 @@ async function run() {
       res.send(result);
     });
 
+  
+
     // get all booking as current users login .
-    app.get('/bookings', verifyJwt,  async(req, res)=>{
-      // console.log('Token',req.headers.authorization)
+    app.get('/bookings', async(req, res)=>{
       const email = req.query.email;
-      const decodedEmail = req.decoded?.email;
-      if(email !== decodedEmail){
-        return res.status(403).send({message:'Forbidden Access'})
-      }
+      // const decodedEmail = req.decoded?.email;
+      // if(email !== decodedEmail){
+      //   return res.status(403).send({message:'Forbidden Access'})
+      // }
       const query = {email: email};
       const bookings = await bookingCollection.find(query).toArray();
       res.send(bookings);
+    })
+
+
+    // Get a Booking by an Id
+    app.get('/bookings/:id', async(req, res)=>{
+      const id = req.params.id;
+      const query ={_id : new ObjectId(id)};
+      const result = await bookingCollection.findOne(query);
+      res.send(result)
     })
 
 
@@ -126,63 +153,15 @@ async function run() {
     })
 
 
+
     app.get('/appointmentSpecialty', async(req, res)=>{
       const query ={};
       const result = await appOptionCollection.find(query).project({name: 1}).toArray();
       res.send(result)
-    })
-
-    // app.get('/v2/appointmentOptions', async(req,res)=>{
-    //   const date = req.query.date;
-    //   const options = await appOptionCollection.aggregate([
-    //     {
-    //       $lookup:
-    //         {
-    //           from: 'bookings',
-    //           localField: 'name',
-    //           foreignField: 'treatment',
-    //           pipeline: [ 
-    //             {
-    //               $match:{
-    //                 $expr:{
-    //                   $eq: ['$selectedDate', date]
-    //                 }
-    //               }
-    //             }
-    //           ],
-    //           as: 'booked'
-    //         }
-    //    },
-    //    {
-    //       $project:{
-    //         name: 1,
-    //         slots: 1,
-    //         booked:{
-    //           $map:{
-    //             input: '$booked',
-    //             as: 'book',
-    //             in: '$$book.slot'
-    //           }
-    //         }
-    //       }
-    //    },
-    //    {
-    //       $project:{
-    //         name: 1,
-    //         slots: {
-    //           $setDifference: ['$slots', '$booked']
-    //         }
-    //       }
-    //    }
-    //   ]).toArray();
-
-    //   res.send(options);
-    // })
+    });
 
 
      // User related all Api
-   
-   
      app.post('/users', async(req, res)=>{
       const user = req.body;
       const result = await usersCollection.insertOne(user);
@@ -204,6 +183,7 @@ async function run() {
     })
 
     // Make a user Admin
+
     app.put('/users/admin/:id', verifyJwt, async(req, res)=>{
 
       const decodedEmail = req.decoded?.email;
@@ -227,16 +207,41 @@ async function run() {
     });
 
 
+
+    // Temporary to update price on appointment option
+
+    // app.get('/addPrice', async(req, res)=>{
+    //   const filter = {};
+    //   const options ={upsert :true}
+    //   const updatedDoc ={
+    //     $set:{
+    //       price: 599
+    //     }
+    //   }
+    //   const result = await appOptionCollection.updateMany(filter, updatedDoc, options);
+
+    //   res.send(result)
+    // })
+
+
+
     // Doctors collection related Api
-    app.post('/doctors', async(req, res)=>{
+    app.post('/doctors',  async(req, res)=>{
       const doctor = req.body;
       const result = await doctorCollection.insertOne(doctor);
       res.send(result)
     })
 
-    app.get('/doctors', async(req, res)=>{
+    app.get('/doctors', verifyJwt, async(req, res)=>{
       const query ={}
       const result = await doctorCollection.find(query).toArray();
+      res.send(result)
+    })
+
+    app.delete('/doctors/:id',  async(req, res)=>{
+      const id = req.params.id;
+      const filter = {_id : new ObjectId(id)};
+      const result = await doctorCollection.deleteOne(filter);
       res.send(result)
     })
 
