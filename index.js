@@ -3,12 +3,14 @@ const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');;
 const app = express();
+const stripe = require("stripe")('sk_test_51OFW95Lm0G0ptRDPZpWsQcb5qcEAkdRfFBR3kMYaMQM7PPPOE2d3UToZUmSK1P3lH8B8BeWuE99vyQoUCRqbrzG100uoFY154d');
 require('dotenv').config();
 const port = process.env.PORT || 5000;
 
 // middleware
 app.use(cors());
 app.use(express.json());
+// app.use(express.static("public"))
 
 
 
@@ -26,7 +28,6 @@ const client = new MongoClient(uri, {
 
 
 // MiddleWare for Verify Token
-
 const verifyJwt = (req, res, next)=>{
   // console.log('Token inside Jwt',req.headers.authorization)
   const authHeader = req.headers.authorization;
@@ -57,6 +58,7 @@ async function run() {
     const bookingCollection = client.db('DoctorPortalDB').collection('bookings');
     const usersCollection = client.db('DoctorPortalDB').collection('users');
     const doctorCollection = client.db('DoctorPortalDB').collection('doctors');
+    const paymentCollection = client.db('DoctorPortalDB').collection('payments');
 
     // Another MiddleWare
     // make sure you verifyAdmin after verifyJwt
@@ -72,6 +74,38 @@ async function run() {
     //   next();
 
     // }
+
+  app.post('/create-payment-intent', async(req, res)=>{
+    const booking = req.body;
+    const price = booking.price;
+    const amount = price * 100;
+    const paymentIntent = await stripe.paymentIntents.create({
+      currency: "usd",
+      amount: amount,
+      "payment_method_types": [
+        "card"
+      ]
+    });
+    res.send({
+      clientSecret: paymentIntent.client_secret,
+    });
+  })
+
+  app.post('/payments', async(req, res)=>{
+    const payment = req.body;
+    const result = await paymentCollection.insertOne(payment);
+    const id = payment.bookingId;
+    const filter = {_id : new ObjectId(id)}
+    const options ={upsert: true}
+    const updatedDoc ={
+      $set:{
+        paid: true,
+        transactionId: payment.transactionId
+      }
+    }
+    const updatedResult = await bookingCollection.updateOne(filter,updatedDoc, options )
+    res.send(result)
+  })
 
   app.get('/jwt', async(req, res)=>{
     const email = req.query.email;
